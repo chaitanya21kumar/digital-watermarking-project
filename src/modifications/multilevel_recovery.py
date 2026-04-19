@@ -94,11 +94,20 @@ class MultiLevelRecoveryAuthenticator(WatermarkAuthenticator):
         tamper_map = self._refine_tamper_map(tamper_map)
         tamper_map_1d = tamper_map.flatten()
         
-        # PHASE 5: Three-tier recovery
+        # PHASE 5: Three-tier recovery WITH REVERSE MAPPING FIX
         print("[Auth-3Tier] Phase 5: Three-tier hierarchical recovery...")
         from src.vq import VectorQuantizer
         vq = VectorQuantizer(codebook_size=256, block_size=self.block_size)
         vq.codebook = vq_codebook
+        
+        # Build reverse maps: For each block, find which blocks store recovery data for it
+        reverse_map1 = np.full(num_blocks, -1, dtype=np.int32)
+        reverse_map2 = np.full(num_blocks, -1, dtype=np.int32)
+        for src_idx in range(num_blocks):
+            dst_idx = map1[src_idx]
+            reverse_map1[dst_idx] = src_idx
+            dst_idx = map2[src_idx]
+            reverse_map2[dst_idx] = src_idx
         
         recovered_image = stego_image.copy()
         tier_map = np.zeros(num_blocks, dtype=np.uint8)  # 1, 2, or 3
@@ -110,22 +119,36 @@ class MultiLevelRecoveryAuthenticator(WatermarkAuthenticator):
             
             block_row = block_idx // num_blocks_w
             block_col = block_idx % num_blocks_w
+            recovery_block = None
             
-            src1_idx = map1[block_idx]
-            src2_idx = map2[block_idx]
+            # TIER 1: Use RI1 from reverse_map1 (block that stores recovery data FOR this block)
+            if reverse_map1[block_idx] >= 0:
+                src_map1_idx = reverse_map1[block_idx]
+                if not tamper_map_1d[src_map1_idx]:
+                    # Extract RI1 from SOURCE block (which is authentic)
+                    src_block_row = src_map1_idx // num_blocks_w
+                    src_block_col = src_map1_idx % num_blocks_w
+                    _, ri1_from_src, _ = self._extract_block_watermark(
+                        stego_image, src_block_row, src_block_col, BD, WT, self.block_size
+                    )
+                    recovery_block = vq.decode_block(ri1_from_src)
+                    tier_map[block_idx] = 1
             
-            # TIER 1: Use RI1 from Map1 source
-            if not tamper_map_1d[src1_idx]:
-                vq_idx = ri1_ext[block_idx]
-                recovery_block = vq.decode_block(vq_idx)
-                tier_map[block_idx] = 1
-            # TIER 2: Use RI2 from Map2 source
-            elif not tamper_map_1d[src2_idx]:
-                vq_idx = ri2_ext[block_idx]
-                recovery_block = vq.decode_block(vq_idx)
-                tier_map[block_idx] = 2
-            # TIER 3: Interpolation from neighbors + VQ refinement
-            else:
+            # TIER 2: Use RI2 from reverse_map2 (if tier 1 failed)
+            if recovery_block is None and reverse_map2[block_idx] >= 0:
+                src_map2_idx = reverse_map2[block_idx]
+                if not tamper_map_1d[src_map2_idx]:
+                    # Extract RI2 from SOURCE block (which is authentic)
+                    src_block_row = src_map2_idx // num_blocks_w
+                    src_block_col = src_map2_idx % num_blocks_w
+                    _, _, ri2_from_src = self._extract_block_watermark(
+                        stego_image, src_block_row, src_block_col, BD, WT, self.block_size
+                    )
+                    recovery_block = vq.decode_block(ri2_from_src)
+                    tier_map[block_idx] = 2
+            
+            # TIER 3: Interpolation from neighbors + VQ refinement (if both tiers failed)
+            if recovery_block is None:
                 recovery_block = self._tier3_interpolation(
                     recovered_image, block_row, block_col,
                     tamper_map, vq, self.block_size

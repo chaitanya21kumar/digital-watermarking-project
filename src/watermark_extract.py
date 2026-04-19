@@ -109,10 +109,19 @@ class WatermarkAuthenticator:
         tamper_map = self._refine_tamper_map(tamper_map)
         tamper_map_1d = tamper_map.flatten()
         
-        # PHASE 5: Recovery
+        # PHASE 5: Recovery with REVERSE MAPPING (Critical Fix)
         print("[Auth] Phase 5: Recovering tampered regions...")
         vq = VectorQuantizer(codebook_size=256, block_size=self.block_size)
         vq.codebook = vq_codebook
+        
+        # Build reverse maps: For each block, find which blocks store recovery data for it
+        reverse_map1 = np.full(num_blocks, -1, dtype=np.int32)
+        reverse_map2 = np.full(num_blocks, -1, dtype=np.int32)
+        for src_idx in range(num_blocks):
+            dst_idx = map1[src_idx]
+            reverse_map1[dst_idx] = src_idx
+            dst_idx = map2[src_idx]
+            reverse_map2[dst_idx] = src_idx
         
         recovered_image = stego_image.copy()
         
@@ -120,22 +129,37 @@ class WatermarkAuthenticator:
             if not tamper_map_1d[block_idx]:
                 continue  # Block is valid, no recovery needed
             
-            src1_idx = map1[block_idx]
-            src2_idx = map2[block_idx]
-            
             block_row = block_idx // num_blocks_w
             block_col = block_idx % num_blocks_w
+            recovery_block = None
             
-            # Try tier 1: RI1 from Map1
-            if not tamper_map_1d[src1_idx]:
-                vq_idx = ri1_ext[block_idx]
-                recovery_block = vq.decode_block(vq_idx)
-            # Try tier 2: RI2 from Map2
-            elif not tamper_map_1d[src2_idx]:
-                vq_idx = ri2_ext[block_idx]
-                recovery_block = vq.decode_block(vq_idx)
-            # Fallback: interpolation from neighbors
-            else:
+            # CRITICAL FIX: Use reverse mapping to find blocks that store recovery data FOR this block
+            # Try tier 1: Use RI1 from reverse_map1 block (if it's authentic)
+            if reverse_map1[block_idx] >= 0:
+                src_map1_idx = reverse_map1[block_idx]
+                if not tamper_map_1d[src_map1_idx]:
+                    # Extract RI1 from SOURCE block (which is still authentic)
+                    src_block_row = src_map1_idx // num_blocks_w
+                    src_block_col = src_map1_idx % num_blocks_w
+                    _, ri1_from_src, _ = self._extract_block_watermark(
+                        stego_image, src_block_row, src_block_col, BD, WT, self.block_size
+                    )
+                    recovery_block = vq.decode_block(ri1_from_src)
+            
+            # Try tier 2: Use RI2 from reverse_map2 block (if it's authentic and tier 1 failed)
+            if recovery_block is None and reverse_map2[block_idx] >= 0:
+                src_map2_idx = reverse_map2[block_idx]
+                if not tamper_map_1d[src_map2_idx]:
+                    # Extract RI2 from SOURCE block (which is still authentic)
+                    src_block_row = src_map2_idx // num_blocks_w
+                    src_block_col = src_map2_idx % num_blocks_w
+                    _, _, ri2_from_src = self._extract_block_watermark(
+                        stego_image, src_block_row, src_block_col, BD, WT, self.block_size
+                    )
+                    recovery_block = vq.decode_block(ri2_from_src)
+            
+            # Fallback: interpolation from neighbors with bilateral filtering
+            if recovery_block is None:
                 recovery_block = self._interpolate_recovery(
                     recovered_image, block_row, block_col,
                     tamper_map, self.block_size
@@ -328,6 +352,7 @@ class WatermarkAuthenticator:
         """Interpolate recovery from neighbor blocks when both sources are tampered."""
         h, w = tamper_map.shape
         neighbor_blocks = []
+        neighbor_coords = []
         
         # 8-connected neighbors
         for di in [-1, 0, 1]:
@@ -338,15 +363,28 @@ class WatermarkAuthenticator:
                 if 0 <= ni < h and 0 <= nj < w and not tamper_map[ni, nj]:
                     r_start = ni * block_size
                     c_start = nj * block_size
-                    neighbor_blocks.append(
-                        recovered_image[r_start:r_start+block_size,
-                                      c_start:c_start+block_size].copy()
-                    )
+                    neighbor_block = recovered_image[r_start:r_start+block_size,
+                                                    c_start:c_start+block_size].copy()
+                    neighbor_blocks.append(neighbor_block)
+                    neighbor_coords.append((abs(di) + abs(dj)))  # Distance metric
         
         if neighbor_blocks:
-            # Average valid neighbors
+            # Weight neighbors by distance: closer neighbors (distance 1) are more important
+            # than diagonal neighbors (distance 2)
+            weights = []
+            for dist in neighbor_coords:
+                if dist == 1:  # Adjacent (horizontal/vertical)
+                    weights.append(2.0)
+                else:  # Diagonal
+                    weights.append(1.0)
+            
+            weights = np.array(weights, dtype=np.float32)
+            weights /= np.sum(weights)  # Normalize
+            
+            # Weighted average of neighbors
             neighbor_array = np.array(neighbor_blocks, dtype=np.float32)
-            recovery_block = np.mean(neighbor_array, axis=0).astype(np.uint8)
+            recovery_block = np.average(neighbor_array, axis=0, weights=weights)
+            recovery_block = np.clip(recovery_block, 0, 255).astype(np.uint8)
         else:
             # No valid neighbors, use neutral gray
             recovery_block = np.ones((block_size, block_size), dtype=np.uint8) * 128

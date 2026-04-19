@@ -1,0 +1,62 @@
+{
+  "test_results": [
+    {
+      "image_name": "Lena_HD",
+      "attack_type": "cut_black",
+      "psnr_watermarked": 35.2,
+      "psnr_attacked": 18.31,
+      "psnr_attacked_roi": 5.2,
+      "psnr_recovered": 32.71,
+      "psnr_recovered_roi": 23.36,
+      "tpr_percent": 100.0,
+      "fpr_percent": 5.7436,
+      "accuracy_percent": 94.53,
+      "improvement_vs_attacked": 14.39,
+      "quality_assessment": "EXCELLENT"
+    },
+    {
+      "image_name": "Lena_HD",
+      "attack_type": "noise_patch",
+      "psnr_watermarked": 35.2,
+      "psnr_attacked": 22.08,
+      "psnr_attacked_roi": 9.09,
+      "psnr_recovered": 32.7,
+      "psnr_recovered_roi": 23.36,
+      "tpr_percent": 100.0,
+      "fpr_percent": 5.8013,
+      "accuracy_percent": 94.48,
+      "improvement_vs_attacked": 10.62,
+      "quality_assessment": "EXCELLENT"
+    },
+    {
+      "image_name": "Lena_512",
+      "attack_type": "cut_black",
+      "psnr_watermarked": 35.29,
+      "psnr_attacked": 19.97,
+      "psnr_attacked_roi": 6.89,
+      "psnr_recovered": 34.44,
+      "psnr_recovered_roi": 27.01,
+      "tpr_percent": 100.0,
+      "fpr_percent": 5.6859,
+      "accuracy_percent": 94.59,
+      "improvement_vs_attacked": 14.46,
+      "quality_assessment": "EXCELLENT"
+    },
+    {
+      "image_name": "Lena_512",
+      "attack_type": "noise_patch",
+      "psnr_watermarked": 35.29,
+      "psnr_attacked": 22.84,
+      "psnr_attacked_roi": 9.88,
+      "psnr_recovered": 34.41,
+      "psnr_recovered_roi": 26.9,
+      "tpr_percent": 100.0,
+      "fpr_percent": 5.8077,
+      "accuracy_percent": 94.47,
+      "improvement_vs_attacked": 11.57,
+      "quality_assessment": "EXCELLENT"
+    }
+  ],
+  "average_psnr_recovered": 33.56,
+  "average_improvement": 12.76
+}
