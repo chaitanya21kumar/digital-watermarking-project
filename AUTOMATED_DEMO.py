@@ -100,7 +100,7 @@ print("─"*80)
 print("\n📊 Executing pytest...")
 
 result = subprocess.run(
-    ["python", "-m", "pytest", "tests/", "-v", "--tb=line", "-q"],
+    [sys.executable, "-m", "pytest", "tests/", "-v", "--tb=line", "-q"],
     capture_output=True,
     text=True
 )
@@ -146,12 +146,34 @@ try:
     
     print("\n✓ Step 3: AUTHENTICATION - Detecting and recovering...")
     authenticator = WatermarkAuthenticator()
-    metrics, tamper_map, recovered_img = authenticator.authenticate(attacked_img, metadata)
-    print(f"  ✅ Authentication complete!")
-    print(f"     - Tampering Detected: {metrics['TP'] > 0}")
-    print(f"     - True Positive Rate: {metrics['TPR']*100:.1f}%")
-    print(f"     - False Positive Rate: {metrics['FPR']*100:.1f}%")
-    print(f"     - Recovery PSNR: {psnr(img[50:114, 50:114], recovered_img[50:114, 50:114]):.2f} dB")
+
+    # Ground truth tamper map at block-level (4x4 blocks).
+    block_size = metadata.get("block_size", 4)
+    bh = attacked_img.shape[0] // block_size
+    bw = attacked_img.shape[1] // block_size
+    true_tamper = np.zeros((bh, bw), dtype=bool)
+    r0 = 50 // block_size
+    r1 = (114 + block_size - 1) // block_size
+    c0 = 50 // block_size
+    c1 = (114 + block_size - 1) // block_size
+    true_tamper[r0:r1, c0:c1] = True
+
+    result = authenticator.authenticate_and_recover(
+        attacked_img,
+        metadata["vq_codebook"],
+        original_image=img,
+        true_tamper_map=true_tamper,
+    )
+
+    metrics = result["metrics"]
+    tamper_map = result["tamper_map"]
+    recovered_img = result["recovered_image"]
+
+    print("  ✅ Authentication complete!")
+    print(f"     - Predicted tamper ratio: {result['tamper_ratio']*100:.2f}%")
+    print(f"     - TPR: {metrics['TPR']*100:.2f}%")
+    print(f"     - FPR: {metrics['FPR']*100:.4f}%")
+    print(f"     - ROI Recovery PSNR: {psnr(img[50:114, 50:114], recovered_img[50:114, 50:114]):.2f} dB")
     
 except Exception as e:
     print(f"  ❌ Error during functional test: {e}")
@@ -165,24 +187,36 @@ print("\n" + "─"*80)
 print("STEP 5: EXPERIMENTAL RESULTS SUMMARY")
 print("─"*80)
 
-if os.path.exists("results/experiment_summary.json"):
+results_path = Path("results/experiment_results_comprehensive.json")
+if results_path.exists():
     print("\n✓ Loading experiment results...")
-    with open("results/experiment_summary.json") as f:
+    with open(results_path) as f:
         results = json.load(f)
-    
+
+    stats = results.get("statistics", {})
+    experiments = results.get("experiments", [])
+
+    def _fmt(x, nd=2):
+        try:
+            return f"{float(x):.{nd}f}"
+        except Exception:
+            return "N/A"
+
     print("\n📊 Experiment Summary:")
-    experiments = results if isinstance(results, list) else results.get('experiments', [])
     print(f"  Total experiments: {len(experiments)}")
-    
-    # Show a sample
+    wq = stats.get("watermarking_quality", {})
+    dp = stats.get("detection_performance", {})
+    rp = stats.get("recovery_performance", {})
+    print(f"  Avg watermark PSNR: {_fmt(wq.get('avg_psnr_watermarked_db'))} dB")
+    print(f"  Avg TPR / FPR:      {_fmt(dp.get('avg_tpr_percent'))}% / {_fmt(dp.get('avg_fpr_percent'), 6)}%")
+    print(f"  Avg recovery PSNR:  {_fmt(rp.get('avg_psnr_recovered_db'))} dB")
+
     if experiments:
         exp = experiments[0]
-        print(f"\n  Sample: {exp.get('name')} - {exp.get('image')}")
-        metrics = exp.get('metrics', {})
-        print(f"    • Watermarked PSNR: {metrics.get('psnr_watermarked', 'N/A'):.2f} dB")
-        print(f"    • Recovered PSNR: {metrics.get('psnr_recovered', 'N/A'):.2f} dB")
-        print(f"    • TPR: {metrics.get('TPR', 'N/A')*100:.1f}%")
-        print(f"    • FPR: {metrics.get('FPR', 'N/A')*100:.4f}%")
+        print(f"\n  Sample: {exp.get('image_name')} ({exp.get('attack_type')})")
+        print(f"    • Watermarked PSNR: {_fmt(exp.get('psnr_watermarked'))} dB")
+        print(f"    • Recovered PSNR:   {_fmt(exp.get('psnr_recovered'))} dB")
+        print(f"    • TPR / FPR:        {_fmt(exp.get('TPR_percent'))}% / {_fmt(exp.get('FPR_percent'), 6)}%")
 else:
     print("\n⚠️  Experiment results not found")
 
@@ -193,13 +227,13 @@ print("\n" + "─"*80)
 print("STEP 6: IMAGE OUTPUTS - Verification files")
 print("─"*80)
 
-result_dir = Path("images/results")
+result_dir = Path("images/results_comprehensive")
 if result_dir.exists():
     images = list(result_dir.glob("*.png"))
     print(f"\n✓ Result images generated: {len(images)} files")
     
     # Show some example files
-    examples = [f for f in images if any(x in f.name for x in ['exp1_Lena', 'psnr_vs'])]
+    examples = [f for f in images if any(x in f.name for x in ['exp1_', 'psnr_vs'])]
     for img_file in examples[:5]:
         size_kb = img_file.stat().st_size / 1024
         print(f"  ✅ {img_file.name:35} ({size_kb:.0f} KB)")
@@ -214,51 +248,30 @@ print(" "*20 + "📋 WHAT TO SHOW THE PROFESSOR 📋")
 print("="*80)
 
 professor_guide = """
-DEMONSTRATION SCRIPT (Follow this order):
+DEMONSTRATION SCRIPT (data-driven; no hardcoded numbers):
 
-1. WATERMARK QUALITY ✓
-   "Look at the original and watermarked images - they look IDENTICAL!
-    Watermarked PSNR = 35-36 dB (imperceptible per ITU-R standard)"
-   → Show: images/results/exp1_Lena_original.png vs watermarked.png
+1) WATERMARK QUALITY
+    Show any pair: images/results_comprehensive/*_original.png vs *_watermarked.png
+    Point: watermark is visually imperceptible; PSNR is in the results JSON.
 
-2. TAMPERING SIMULATION ✓
-   "Now an attacker has cut out a 64×64 region and replaced it with noise"
-   → Show: images/results/exp1_Lena_attacked.png
+2) VISIBLE TAMPERING
+    Show: *_attacked.png and *_diff_attack.png
+    Point: the diff map highlights the tampered ROI clearly.
 
-3. TAMPERING DETECTION ✓
-   "Our algorithm detects exactly where the tampering occurred"
-   → Show: images/results/exp1_Lena_tamper_map.png (RED = tampered)
-   → Mention: 97% TPR, 0% FPR (detects with no false alarms)
+3) TAMPER DETECTION
+    Show: *_tamper_map.png
+    Point: white blocks are detected tampering (block-level).
 
-4. AUTOMATIC RECOVERY ✓
-   "And automatically restores the tampered region"
-   → Show: images/results/exp1_Lena_recovered.png
-   → Mention: 24 dB PSNR recovery quality
+4) AUTOMATIC RECOVERY
+    Show: *_recovered.png and *_diff_recovery.png
+    Point: recovery fills the ROI; diff_recovery shows residual error.
 
-5. PERFORMANCE GRAPH ✓
-   "Here's how recovery quality degrades with larger attacks"
-   → Show: images/results/psnr_vs_tamper_rate.png
+5) METRICS (TPR/FPR + best 2–3 examples)
+    Run: python show_comprehensive_results.py
+    It prints averaged metrics and lists the best examples to open.
 
-6. TEST RESULTS ✓
-   "Our implementation passes 27 out of 34 tests (79%)"
-   → Mention: 7 failures are on tiny 32×32 images (expected behavior)
-
-7. THE 5 MODIFICATIONS ✓
-   "Beyond the paper, we added 5 novel improvements:
-    - MOD-1: Color image support (paper: grayscale only)
-    - MOD-2: SHA-256 security (100× safer than paper's MD5)
-    - MOD-3: Entropy-adaptive mapping (+15% recovery quality)
-    - MOD-4: Three-tier recovery (works at 90%+ tampering vs 50%)
-    - MOD-5: Post-processing smoothing (+0.8 dB prettier results)
-   "
-
-KEY METRICS TO MENTION:
-  ✓ Watermarked PSNR: 35-36 dB (imperceptible)
-  ✓ True Positive Rate: 97% (detects tampering)
-  ✓ False Positive Rate: 0% (no false alarms)
-  ✓ Recovery Quality: 24 dB PSNR (good)
-  ✓ Implementation Score: 45/40 (exceeded)
-  ✓ Modification Score: 65/60 (exceeded)
+6) TESTS
+    The pytest summary is printed in STEP 3 above.
 """
 
 print(professor_guide)
@@ -295,20 +308,16 @@ print("""
 YOUR PROJECT IS READY FOR PROFESSOR PRESENTATION!
 
 QUICK CHECKLIST:
-✓ All code modules working (verified imports)
-✓ Tests passing (27/34 = 79%)
-✓ Complete watermarking pipeline operational
-✓ Tampering detection working (97% accuracy)
-✓ Recovery system functional
-✓ Visual results available (images/results/)
-✓ Experimental data collected
-✓ Professional documentation ready
+✓ Core modules import successfully
+✓ Pytest summary printed above
+✓ End-to-end embed → tamper → detect → recover ran in STEP 4
+✓ Multi-image comprehensive results saved
 
 NEXT STEPS:
-1. Open images/results/ folder to view output images
-2. Open docs/presentation.pptx for slide show
-3. Open docs/report.docx to review report
-4. Ready to present to professor! 🎓
+1. Open images/results_comprehensive/ to view output images
+2. Run python show_comprehensive_results.py to see metrics + best 2–3 examples
+3. Open docs/presentation.pptx for slides
+4. Open docs/report.docx for the written report
 
 """)
 

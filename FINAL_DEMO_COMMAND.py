@@ -1,70 +1,51 @@
 #!/usr/bin/env python3
-"""
-FINAL MASTER COMMAND - Run this ONE command to impress your professor
-Shows everything: diverse images, experiments, and comprehensive metrics
-"""
+"""Run the complete professor demo (end-to-end, data-driven)."""
 
+from __future__ import annotations
+
+import os
 import subprocess
 import sys
-import os
 from pathlib import Path
 
-print("\n" + "╔" + "="*88 + "╗")
-print("║" + " "*88 + "║")
-print("║" + " "*20 + "🎯 PROFESSOR DEMONSTRATION - COMPLETE SYSTEM 🎯" + " "*22 + "║")
-print("║" + " "*88 + "║")
-print("╚" + "="*88 + "╝")
-print()
 
-print("📋 STEP 1: Generating 6 diverse test images...")
-print("   (Lena, Baboon, Cameraman, Airplane, Elaine, Peppers)")
-print()
+ROOT = Path(__file__).resolve().parent
 
-os.system("python3 generate_test_images.py")
 
-print("\n✓ Test images created!")
-print("\n📊 STEP 2: Running comprehensive watermarking experiments...")
-print("   (Will generate 30 result images + metrics)")
-print()
+def _run(script: str) -> None:
+    env = os.environ.copy()
+    env["PYTHONPATH"] = f"{ROOT}{os.pathsep}{env.get('PYTHONPATH', '')}"
+    subprocess.run([sys.executable, script], cwd=str(ROOT), env=env, check=True)
 
-os.system("python3 generate_comprehensive_results.py")
 
-print("\n✓ Experiments complete!")
-print("\n📈 STEP 3: Displaying comprehensive results summary...")
-print()
+def main() -> int:
+    print("\n" + "╔" + "=" * 88 + "╗")
+    print("║" + " " * 88 + "║")
+    print("║" + " " * 18 + "🎯 PROFESSOR DEMONSTRATION - COMPLETE SYSTEM 🎯" + " " * 20 + "║")
+    print("║" + " " * 88 + "║")
+    print("╚" + "=" * 88 + "╝")
+    print(f"Using Python: {sys.executable}\n")
 
-os.system("python3 show_comprehensive_results.py")
+    print("STEP 1: Generating diverse test images...")
+    _run("generate_test_images.py")
 
-print("\n" + "╔" + "="*88 + "╗")
-print("║" + " "*88 + "║")
-print("║" + "  ✨ ALL DONE! Ready for professor presentation! ✨".center(88) + "║")
-print("║" + " "*88 + "║")
-print("╚" + "="*88 + "╝")
+    print("\nSTEP 2: Running comprehensive experiments...")
+    _run("generate_comprehensive_results.py")
 
-print("\n📁 FILES TO SHOW PROFESSOR:\n")
-print("  1. images/test/       - 6 diverse test images")
-test_files = sorted(Path("images/test").glob("*.png"))
-for f in test_files:
-    size = f.stat().st_size / 1024
-    print(f"     • {f.name:20} ({size:.0f} KB)")
+    print("\nSTEP 3: Showing results summary + best examples...")
+    _run("show_comprehensive_results.py")
 
-print("\n  2. images/results/    - 30+ result images (5 variants per test image)")
-result_files = sorted(Path("images/results").glob("*.png"))
-if len(result_files) > 0:
-    for f in list(result_files)[:10]:
-        size = f.stat().st_size / 1024
-        print(f"     • {f.name:40} ({size:.0f} KB)")
-    if len(result_files) > 10:
-        print(f"     ... and {len(result_files) - 10} more result images")
+    print("\n" + "╔" + "=" * 88 + "╗")
+    print("║" + "  DONE. Open the folders below to show your professor.".ljust(88) + "║")
+    print("╚" + "=" * 88 + "╝")
 
-print("\n  3. results/experiment_results_comprehensive.json - All metrics data\n")
+    print("\nFolders:")
+    print(f"  - images/test")
+    print(f"  - images/results_comprehensive")
+    print("\nMetrics JSON:")
+    print("  - results/experiment_results_comprehensive.json\n")
+    return 0
 
-print("📊 KEY METRICS TO MENTION:\n")
-print("  • Watermark Quality (PSNR): 35+ dB (imperceptible - exceeds ITU-R >30dB)")
-print("  • Detection Accuracy (TPR): 97%+ (catches tampering)")
-print("  • False Alarms (FPR): <0.01% (virtually none)")
-print("  • Recovery Quality (PSNR): 24+ dB (acceptable)")
-print("  • Test Coverage: 6 diverse images with different characteristics")
-print()
 
-print("🎯 TOTAL SCORE: 110/100 (45/40 core + 65/60 modifications)\n")
+if __name__ == "__main__":
+    raise SystemExit(main())

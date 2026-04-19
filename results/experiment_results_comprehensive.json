@@ -1,0 +1,192 @@
+{
+  "statistics": {
+    "total_experiments": 6,
+    "images_tested": [
+      "Airplane",
+      "Baboon",
+      "Cameraman",
+      "Elaine",
+      "Lena",
+      "Peppers"
+    ],
+    "watermarking_quality": {
+      "avg_psnr_watermarked_db": 36.228,
+      "min_psnr_watermarked_db": 35.286,
+      "max_psnr_watermarked_db": 37.459,
+      "quality_assessment": "Imperceptible (ITU-R >30dB)"
+    },
+    "attack_visibility": {
+      "avg_psnr_attacked_db": 23.576,
+      "assessment": "Moderate visibility"
+    },
+    "detection_performance": {
+      "avg_tpr_percent": 9.564,
+      "avg_fpr_percent": 0.0,
+      "avg_accuracy_percent": 9.564
+    },
+    "recovery_performance": {
+      "avg_psnr_recovered_db": 25.693,
+      "min_psnr_recovered_db": 23.601,
+      "max_psnr_recovered_db": 30.708
+    },
+    "timestamp": "2026-04-19T23:56:31.108540"
+  },
+  "experiments": [
+    {
+      "exp_id": 1,
+      "image_name": "Airplane",
+      "image_size": "512x512",
+      "attack_type": "cut_black",
+      "attack_region": "[200:312, 200:312]",
+      "psnr_watermarked": 35.499,
+      "psnr_attacked": 19.742,
+      "psnr_recovered": 23.631,
+      "TP": 1677,
+      "TN": 0,
+      "FP": 0,
+      "FN": 14707,
+      "TPR_percent": 10.236,
+      "FPR_percent": 0.0,
+      "accuracy_percent": 10.236,
+      "files": {
+        "original": "exp1_Airplane_original.png",
+        "watermarked": "exp1_Airplane_watermarked.png",
+        "attacked": "exp1_Airplane_attacked.png",
+        "tamper_map": "exp1_Airplane_tamper_map.png",
+        "recovered": "exp1_Airplane_recovered.png",
+        "diff_attack": "exp1_Airplane_diff_attack.png",
+        "diff_recovery": "exp1_Airplane_diff_recovery.png"
+      }
+    },
+    {
+      "exp_id": 2,
+      "image_name": "Baboon",
+      "image_size": "512x512",
+      "attack_type": "noise_patch",
+      "attack_region": "[200:312, 200:312]",
+      "psnr_watermarked": 35.382,
+      "psnr_attacked": 22.987,
+      "psnr_recovered": 25.945,
+      "TP": 1687,
+      "TN": 0,
+      "FP": 0,
+      "FN": 14697,
+      "TPR_percent": 10.297,
+      "FPR_percent": 0.0,
+      "accuracy_percent": 10.297,
+      "files": {
+        "original": "exp2_Baboon_original.png",
+        "watermarked": "exp2_Baboon_watermarked.png",
+        "attacked": "exp2_Baboon_attacked.png",
+        "tamper_map": "exp2_Baboon_tamper_map.png",
+        "recovered": "exp2_Baboon_recovered.png",
+        "diff_attack": "exp2_Baboon_diff_attack.png",
+        "diff_recovery": "exp2_Baboon_diff_recovery.png"
+      }
+    },
+    {
+      "exp_id": 3,
+      "image_name": "Cameraman",
+      "image_size": "512x512",
+      "attack_type": "copy_paste",
+      "attack_region": "[200:312, 200:312]",
+      "psnr_watermarked": 36.302,
+      "psnr_attacked": 25.702,
+      "psnr_recovered": 24.796,
+      "TP": 1666,
+      "TN": 0,
+      "FP": 0,
+      "FN": 14718,
+      "TPR_percent": 10.168,
+      "FPR_percent": 0.0,
+      "accuracy_percent": 10.168,
+      "files": {
+        "original": "exp3_Cameraman_original.png",
+        "watermarked": "exp3_Cameraman_watermarked.png",
+        "attacked": "exp3_Cameraman_attacked.png",
+        "tamper_map": "exp3_Cameraman_tamper_map.png",
+        "recovered": "exp3_Cameraman_recovered.png",
+        "diff_attack": "exp3_Cameraman_diff_attack.png",
+        "diff_recovery": "exp3_Cameraman_diff_recovery.png"
+      }
+    },
+    {
+      "exp_id": 4,
+      "image_name": "Elaine",
+      "image_size": "512x512",
+      "attack_type": "cut_black",
+      "attack_region": "[200:312, 200:312]",
+      "psnr_watermarked": 37.459,
+      "psnr_attacked": 18.481,
+      "psnr_recovered": 25.475,
+      "TP": 1616,
+      "TN": 0,
+      "FP": 0,
+      "FN": 14768,
+      "TPR_percent": 9.863,
+      "FPR_percent": 0.0,
+      "accuracy_percent": 9.863,
+      "files": {
+        "original": "exp4_Elaine_original.png",
+        "watermarked": "exp4_Elaine_watermarked.png",
+        "attacked": "exp4_Elaine_attacked.png",
+        "tamper_map": "exp4_Elaine_tamper_map.png",
+        "recovered": "exp4_Elaine_recovered.png",
+        "diff_attack": "exp4_Elaine_diff_attack.png",
+        "diff_recovery": "exp4_Elaine_diff_recovery.png"
+      }
+    },
+    {
+      "exp_id": 5,
+      "image_name": "Lena",
+      "image_size": "512x512",
+      "attack_type": "noise_patch",
+      "attack_region": "[200:312, 200:312]",
+      "psnr_watermarked": 35.286,
+      "psnr_attacked": 22.838,
+      "psnr_recovered": 23.601,
+      "TP": 1690,
+      "TN": 0,
+      "FP": 0,
+      "FN": 14694,
+      "TPR_percent": 10.315,
+      "FPR_percent": 0.0,
+      "accuracy_percent": 10.315,
+      "files": {
+        "original": "exp5_Lena_original.png",
+        "watermarked": "exp5_Lena_watermarked.png",
+        "attacked": "exp5_Lena_attacked.png",
+        "tamper_map": "exp5_Lena_tamper_map.png",
+        "recovered": "exp5_Lena_recovered.png",
+        "diff_attack": "exp5_Lena_diff_attack.png",
+        "diff_recovery": "exp5_Lena_diff_recovery.png"
+      }
+    },
+    {
+      "exp_id": 6,
+      "image_name": "Peppers",
+      "image_size": "512x512",
+      "attack_type": "copy_paste",
+      "attack_region": "[200:312, 200:312]",
+      "psnr_watermarked": 37.442,
+      "psnr_attacked": 31.709,
+      "psnr_recovered": 30.708,
+      "TP": 1066,
+      "TN": 0,
+      "FP": 0,
+      "FN": 15318,
+      "TPR_percent": 6.506,
+      "FPR_percent": 0.0,
+      "accuracy_percent": 6.506,
+      "files": {
+        "original": "exp6_Peppers_original.png",
+        "watermarked": "exp6_Peppers_watermarked.png",
+        "attacked": "exp6_Peppers_attacked.png",
+        "tamper_map": "exp6_Peppers_tamper_map.png",
+        "recovered": "exp6_Peppers_recovered.png",
+        "diff_attack": "exp6_Peppers_diff_attack.png",
+        "diff_recovery": "exp6_Peppers_diff_recovery.png"
+      }
+    }
+  ]
+}

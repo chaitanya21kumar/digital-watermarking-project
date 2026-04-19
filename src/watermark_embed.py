@@ -110,25 +110,30 @@ class WatermarkEmbedder:
         return stego_image, metadata
     
     def _preprocess_image(self, image: np.ndarray) -> np.ndarray:
-        """Replace 4 LSBs of each pixel with random bits."""
+        """Replace 4 LSBs of each pixel with random bits (vectorized)."""
         h, w = image.shape
         rng = np.random.default_rng(self.seed_gamma)
         
-        # Generate random bit stream
-        bit_stream = rng.integers(0, 2, size=4 * h * w, dtype=np.uint8)
+        # Generate random bit stream: shape (h*w, 4)
+        bit_stream = rng.integers(0, 2, size=(h * w, 4), dtype=np.uint8)
         
-        preprocessed = image.copy().astype(np.uint32)
+        # Extract 4 random bits to form nibble (vectorized):
+        # bit_stream[:, 0] -> 8's place
+        # bit_stream[:, 1] -> 4's place
+        # bit_stream[:, 2] -> 2's place
+        # bit_stream[:, 3] -> 1's place
+        nibbles = (
+            (bit_stream[:, 0] << 3) |
+            (bit_stream[:, 1] << 2) |
+            (bit_stream[:, 2] << 1) |
+             bit_stream[:, 3]
+        ).astype(np.uint8)
         
-        for i in range(h * w):
-            # Extract 4 random bits to form nibble
-            nibble = 0
-            for k in range(4):
-                nibble = (nibble << 1) | bit_stream[4*i + k]
-            
-            # Replace 4 LSBs: keep upper 4 bits, replace lower 4
-            preprocessed.flat[i] = (preprocessed.flat[i] & 0xF0) | nibble
+        # Flatten image, replace LSBs, reshape
+        preprocessed = image.copy().astype(np.uint32).flatten()
+        preprocessed = (preprocessed & 0xF0) | nibbles
         
-        return preprocessed.astype(np.uint8)
+        return preprocessed.reshape(h, w).astype(np.uint8)
     
     def _embed_block_watermark(self, stego_image: np.ndarray,
                                 block_row: int, block_col: int,

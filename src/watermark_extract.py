@@ -18,16 +18,25 @@ class WatermarkAuthenticator:
         self.seed_gamma2 = seed_gamma2
         self.block_size = block_size
     
-    def authenticate_and_recover(self, stego_image: np.ndarray,
-                                 vq_codebook: np.ndarray,
-                                 original_image: np.ndarray = None) -> dict:
+    def authenticate_and_recover(
+        self,
+        stego_image: np.ndarray,
+        vq_codebook: np.ndarray,
+        original_image: np.ndarray | None = None,
+        true_tamper_map: np.ndarray | None = None,
+    ) -> dict:
         """
         Full authentication and recovery pipeline.
         
         Args:
             stego_image: uint8 watermarked/attacked image
             vq_codebook: VQ codebook for recovery
-            original_image: Optional original image for computing exact metrics
+            original_image: Optional reference (typically the *original host* image).
+                If provided, PSNR metrics are computed against it.
+                For detection ground truth, we *ignore watermark-only LSB changes* by
+                thresholding absolute pixel differences > 15.
+            true_tamper_map: Optional *block-level* boolean tamper map (2D or 1D).
+                If provided, it is used as the ground truth for detection metrics.
         
         Returns:
             Dictionary with tamper_map, recovered_image, metrics, etc.
@@ -35,6 +44,14 @@ class WatermarkAuthenticator:
         stego_image = stego_image.astype(np.uint8)
         stego_image = crop_to_block_size(stego_image, self.block_size)
         h, w = stego_image.shape
+
+        if original_image is not None:
+            original_image = crop_to_block_size(original_image.astype(np.uint8), self.block_size)
+            if original_image.shape != stego_image.shape:
+                raise ValueError(
+                    "original_image must match stego_image shape after cropping "
+                    f"(got {original_image.shape} vs {stego_image.shape})."
+                )
         
         print(f"[Auth] Image size: {h}x{w}")
         
@@ -153,23 +170,44 @@ class WatermarkAuthenticator:
             'TP': 0, 'TN': 0, 'FP': 0, 'FN': 0,
             'TPR': 0, 'FPR': 0, 'FNR': 0, 'Accuracy': 0
         }
-        
-        if original_image is not None:
-            true_tamper = (stego_image != original_image)
-            true_tamper = crop_to_block_size(true_tamper, self.block_size)
-            
-            # Create block-level true tamper map
-            true_tamper_1d = np.zeros(num_blocks, dtype=bool)
-            for block_idx in range(num_blocks):
-                block_row = block_idx // num_blocks_w
-                block_col = block_idx % num_blocks_w
-                r_start = block_row * self.block_size
-                c_start = block_col * self.block_size
-                block = true_tamper[r_start:r_start+self.block_size,
-                                   c_start:c_start+self.block_size]
-                if np.any(block):
-                    true_tamper_1d[block_idx] = True
-            
+
+        true_tamper_1d: np.ndarray | None = None
+
+        # Prefer explicit ground truth tamper map if provided.
+        if true_tamper_map is not None:
+            true_tm = np.asarray(true_tamper_map).astype(bool)
+            if true_tm.ndim == 2:
+                if true_tm.shape != (num_blocks_h, num_blocks_w):
+                    raise ValueError(
+                        "true_tamper_map 2D shape must match block grid "
+                        f"({num_blocks_h}, {num_blocks_w}), got {true_tm.shape}."
+                    )
+                true_tamper_1d = true_tm.flatten()
+            elif true_tm.ndim == 1:
+                if true_tm.shape[0] != num_blocks:
+                    raise ValueError(
+                        f"true_tamper_map 1D length must be {num_blocks}, got {true_tm.shape[0]}."
+                    )
+                true_tamper_1d = true_tm
+            else:
+                raise ValueError("true_tamper_map must be a 1D or 2D boolean array.")
+
+        # Backward-compatible heuristic: derive ground truth from a reference image.
+        # We intentionally ignore watermark-only changes (<= 15 per pixel) since embedding
+        # only alters the lower 4 bits of pixels.
+        elif original_image is not None:
+            diff = np.abs(stego_image.astype(np.int16) - original_image.astype(np.int16))
+            true_tamper_pixels = diff > 15
+
+            # Convert pixel-level tamper mask to block-level.
+            # Shape: (Bh, bs, Bw, bs) -> (Bh, Bw)
+            bh = num_blocks_h
+            bw = num_blocks_w
+            bs = self.block_size
+            true_blocks = true_tamper_pixels.reshape(bh, bs, bw, bs).any(axis=(1, 3))
+            true_tamper_1d = true_blocks.flatten()
+
+        if true_tamper_1d is not None:
             metrics = compute_detection_metrics(tamper_map_1d, true_tamper_1d)
         
         print("[Auth] ✓ Authentication complete")

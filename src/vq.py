@@ -1,7 +1,7 @@
 """Vector Quantization (VQ) implementation for watermarking recovery."""
 
+import os
 import numpy as np
-from sklearn.cluster import KMeans
 
 
 class VectorQuantizer:
@@ -36,18 +36,74 @@ class VectorQuantizer:
         
         vectors = np.array(vectors, dtype=np.float32)
         
-        # Train KMeans to find 256 cluster centers
-        kmeans = KMeans(n_clusters=min(self.codebook_size, len(vectors)),
-                       n_init=3, max_iter=100, random_state=42)
-        kmeans.fit(vectors)
-        
+        # Subsample training vectors for speed on large images.
+        rng = np.random.default_rng(42)
+        if len(vectors) > 4096:
+            sample_idx = rng.choice(len(vectors), size=4096, replace=False)
+            train_vectors = vectors[sample_idx]
+        else:
+            train_vectors = vectors
+
+        # Train KMeans codebook. Default to numpy implementation for portability.
+        n_clusters = min(self.codebook_size, len(train_vectors))
+        centers = None
+
+        use_sklearn = os.environ.get("VQ_USE_SKLEARN", "0") == "1"
+        if use_sklearn:
+            try:
+                from sklearn.cluster import KMeans  # type: ignore
+
+                kmeans = KMeans(
+                    n_clusters=n_clusters,
+                    n_init=3,
+                    max_iter=100,
+                    random_state=42,
+                )
+                kmeans.fit(train_vectors)
+                centers = kmeans.cluster_centers_
+            except Exception:
+                centers = self._kmeans_numpy(train_vectors, n_clusters, max_iter=20, seed=42)
+        else:
+            centers = self._kmeans_numpy(train_vectors, n_clusters, max_iter=20, seed=42)
+
         # Store codebook, clip values to [0, 255]
-        self.codebook = np.clip(kmeans.cluster_centers_, 0, 255).astype(np.uint8)
+        self.codebook = np.clip(centers, 0, 255).astype(np.uint8)
         
         # If we got fewer clusters than requested, pad with zeros
         if self.codebook.shape[0] < self.codebook_size:
             padding = np.zeros((self.codebook_size - self.codebook.shape[0], 16), dtype=np.uint8)
             self.codebook = np.vstack([self.codebook, padding])
+
+    def _kmeans_numpy(self, vectors: np.ndarray, n_clusters: int,
+                      max_iter: int = 30, seed: int = 42) -> np.ndarray:
+        """Lightweight numpy k-means fallback for environments without sklearn."""
+        rng = np.random.default_rng(seed)
+        n_samples = vectors.shape[0]
+
+        # Initialize centers with unique samples.
+        init_idx = rng.choice(n_samples, size=n_clusters, replace=False)
+        centers = vectors[init_idx].astype(np.float32).copy()
+
+        for _ in range(max_iter):
+            # Assign each sample to nearest center (squared Euclidean distance).
+            d2 = np.sum((vectors[:, None, :] - centers[None, :, :]) ** 2, axis=2)
+            labels = np.argmin(d2, axis=1)
+
+            new_centers = centers.copy()
+            for k in range(n_clusters):
+                members = vectors[labels == k]
+                if len(members) > 0:
+                    new_centers[k] = np.mean(members, axis=0)
+                else:
+                    # Re-seed empty cluster to a random sample.
+                    new_centers[k] = vectors[rng.integers(0, n_samples)]
+
+            if np.allclose(new_centers, centers, atol=1e-3):
+                centers = new_centers
+                break
+            centers = new_centers
+
+        return centers
     
     def encode(self, image: np.ndarray) -> np.ndarray:
         """

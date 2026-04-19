@@ -1,62 +1,47 @@
 #!/usr/bin/env python3
-"""
-MASTER DEMO SCRIPT - Run everything in one Python command
-No bash required - works on all systems
-"""
+"""Run the end-to-end demo from Python (no bash)."""
 
+from __future__ import annotations
+
+import os
 import subprocess
 import sys
-import os
 from pathlib import Path
 
-print("\n" + "="*90)
-print(" "*15 + "🎯 DIGITAL WATERMARKING SYSTEM - COMPLETE DEMO 🎯")
-print("="*90)
 
-# Check virtual environment
-if sys.prefix == sys.base_prefix:
-    print("\n⚠️  WARNING: Not running in virtual environment!")
-    print("   Activate it first: source venv/bin/activate")
-    print("   Then run: python run_all_demo.py")
-    response = input("\nContinue anyway? (y/n): ")
-    if response.lower() != 'y':
-        sys.exit(1)
+ROOT = Path(__file__).resolve().parent
 
-print("\n✓ Proceeding with demo...")
 
-# Step 1: Generate test images
-print("\n" + "="*90)
-print("STEP 1: GENERATING DIVERSE TEST IMAGES")
-print("="*90)
+def _run(script: str) -> None:
+    env = os.environ.copy()
+    env["PYTHONPATH"] = f"{ROOT}{os.pathsep}{env.get('PYTHONPATH', '')}"
+    subprocess.run([sys.executable, script], cwd=str(ROOT), env=env, check=True)
 
-try:
-    import generate_test_images
-    print("✅ Test images generated successfully!")
-except Exception as e:
-    print(f"⚠️  Error generating test images: {e}")
 
-# Step 2: Generate comprehensive results
-print("\n" + "="*90)
-print("STEP 2: RUNNING COMPREHENSIVE WATERMARKING EXPERIMENTS")
-print("="*90)
+def main() -> int:
+    print("\n" + "=" * 90)
+    print(" " * 14 + "🎯 DIGITAL WATERMARKING SYSTEM - COMPLETE DEMO")
+    print("=" * 90)
+    print(f"Using Python: {sys.executable}")
 
-try:
-    import generate_comprehensive_results
-    print("✅ Experiments completed!")
-except Exception as e:
-    print(f"⚠️  Error running experiments: {e}")
+    if sys.prefix == sys.base_prefix:
+        print("\n⚠️  Warning: not running inside a virtual environment.")
+        print("   (This is OK if dependencies are installed globally.)")
 
-# Step 3: Show results
-print("\n" + "="*90)
-print("STEP 3: DISPLAYING COMPREHENSIVE RESULTS")
-print("="*90)
+    print("\nSTEP 1: Generating diverse test images...")
+    _run("generate_test_images.py")
 
-try:
-    import show_comprehensive_results
-    print("✅ Results displayed!")
-except Exception as e:
-    print(f"⚠️  Error displaying results: {e}")
+    print("\nSTEP 2: Running comprehensive experiments...")
+    _run("generate_comprehensive_results.py")
 
-print("\n" + "="*90)
-print("✅ DEMO COMPLETE")
-print("="*90)
+    print("\nSTEP 3: Displaying results summary...")
+    _run("show_comprehensive_results.py")
+
+    print("\n" + "=" * 90)
+    print("✅ DEMO COMPLETE")
+    print("=" * 90 + "\n")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

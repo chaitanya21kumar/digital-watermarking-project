@@ -47,230 +47,141 @@ try:
     elif psnr_val >= 30:
         rating = "🟡 GOOD - Mostly imperceptible"
     else:
-        rating = "🔴 FAIR - Visible watermark"
-    
-    print(f"  Assessment: {rating}")
-    print(f"  Quality: {wq.get('quality_assessment', 'Unknown')}")
-    
-    # ============================================================================
-    # SECTION 2: DETECTION ACCURACY
-    # ============================================================================
-    print("\n" + "─"*90)
-    print("🎯 SECTION 2: TAMPERING DETECTION ACCURACY")
-    print("─"*90)
-    
-    dp = stats.get("detection_performance", {})
-    tpr = dp.get('avg_tpr_percent', 0)
-    fpr = dp.get('avg_fpr_percent', 0)
-    acc = dp.get('avg_accuracy_percent', 0)
-    
-    print(f"\n  True Positive Rate (Sensitivity): {tpr:.2f}%")
-    print(f"    └─ Ability to detect actual tampering: {tpr:.1f}% of tampering detected")
-    
-    print(f"\n  False Positive Rate: {fpr:.4f}%")
-    print(f"    └─ False alarms: Only {fpr:.4f}% false positives")
-    
-    print(f"\n  Overall Accuracy: {acc:.2f}%")
-    
-    rating = ""
-    if tpr >= 95 and fpr < 0.01:
-        rating = "🟢 EXCELLENT - Superior detection performance"
-    elif tpr >= 90 and fpr < 0.1:
-        rating = "🟡 GOOD - Strong detection with minimal false alarms"
-    else:
-        rating = "🔴 FAIR - Room for improvement"
-    
-    print(f"  Assessment: {rating}")
-    print(f"  Quality: {dp.get('detection_quality', 'Unknown')}")
-    
-    # ============================================================================
-    # SECTION 3: RECOVERY QUALITY
-    # ============================================================================
-    print("\n" + "─"*90)
-    print("🎯 SECTION 3: WATERMARK RECOVERY QUALITY")
-    print("─"*90)
-    
-    rp = stats.get("recovery_performance", {})
-    rec_psnr = rp.get('avg_psnr_recovered_db', 0)
-    
-    print(f"\n  Average Recovery PSNR: {rec_psnr:.2f} dB")
-    print(f"  Range: {rp.get('min_psnr_recovered_db', 0)} dB to {rp.get('max_psnr_recovered_db', 0)} dB")
-    
-    if rec_psnr >= 24:
-        rating = "🟢 EXCELLENT - High-quality recovery"
-    elif rec_psnr >= 20:
-        rating = "🟡 GOOD - Acceptable recovery quality"
-    else:
-        rating = "🔴 FAIR - Low recovery quality"
-    
-    print(f"  Assessment: {rating}")
-    print(f"  Quality: {rp.get('recovery_assessment', 'Unknown')}")
-    
-    # ============================================================================
-    # SECTION 4: EXPERIMENT SUMMARY
-    # ============================================================================
-    print("\n" + "─"*90)
-    print("🎯 SECTION 4: EXPERIMENT SUMMARY")
-    print("─"*90)
-    
-    total_exp = stats.get("total_experiments", 0)
-    images = stats.get("images_tested", [])
-    
-    print(f"\n  Total Experiments: {total_exp}")
-    print(f"  Images Tested:")
-    for img in images:
-        print(f"    • {img}")
-    
-    print(f"\n  Output Files Generated:")
-    results_dir = Path("images/results")
-    png_count = len(list(results_dir.glob("*.png"))) if results_dir.exists() else 0
-    print(f"    • {png_count} result images")
-    print(f"    • {total_exp * 5} expected output files (5 per experiment)")
-    
-    # ============================================================================
-    # SECTION 5: PER-IMAGE BREAKDOWN
-    # ============================================================================
-    print("\n" + "─"*90)
-    print("🎯 SECTION 5: DETAILED PER-IMAGE RESULTS")
-    print("─"*90)
-    
-    for idx, exp in enumerate(experiments, 1):
-        img_name = exp.get("image_name", "Unknown")
-        img_size = exp.get("image_size", "Unknown")
-        psnr_w = exp.get("psnr_watermarked", 0)
-        psnr_r = exp.get("psnr_recovered", 0)
-        tpr = exp.get("TPR_percent", 0)
-        fpr = exp.get("FPR_percent", 0)
-        
-        print(f"\n  Experiment {idx}: {img_name} ({img_size})")
-        print(f"    Watermark Quality:  PSNR = {psnr_w:.2f} dB {'✅' if psnr_w >= 30 else '⚠️'}")
-        print(f"    Detection:          TPR = {tpr:.1f}%, FPR = {fpr:.4f}% {'✅' if tpr >= 90 else '⚠️'}")
-        print(f"    Recovery Quality:   PSNR = {psnr_r:.2f} dB {'✅' if psnr_r >= 20 else '⚠️'}")
-        print(f"    Files: original, watermarked, attacked, tamper_map, recovered")
-    
-    # ============================================================================
-    # SECTION 6: PROFESSOR PRESENTATION GUIDE
-    # ============================================================================
-    print("\n" + "─"*90)
-    print("🎯 SECTION 6: PROFESSOR PRESENTATION GUIDE")
-    print("─"*90)
-    
-    print(f"""
-  📋 RECOMMENDED PRESENTATION FLOW:
-  
-  1. SHOW TEST IMAGES (1 minute)
-     Command: open images/test/
-     Explain: "6 diverse test images with different characteristics:
-              • Lena - Portrait with smooth gradients
-              • Baboon - High texture and detail
-              • Cameraman - Edges and structures
-              • Airplane - Large objects
-              • Elaine - Smooth portrait
-              • Peppers - Multiple textured objects"
-  
-  2. DEMONSTRATE WATERMARK QUALITY (2 minutes)
-     Show: Original vs Watermarked images
+        #!/usr/bin/env python3
+        """Display comprehensive results (data-driven, no hardcoded claims)."""
+
+        from __future__ import annotations
+
+        import json
+        import sys
+        from pathlib import Path
+
+
+        RESULTS_FILE = Path("results/experiment_results_comprehensive.json")
+        RESULTS_DIR = Path("images/results_comprehensive")
+
+
+        def _fmt(val, ndigits: int = 2) -> str:
+            try:
+                return f"{float(val):.{ndigits}f}"
+            except Exception:
+                return "N/A"
+
+
+        def main() -> int:
+            print("\n" + "=" * 90)
+            print(" " * 10 + "📊 DIGITAL WATERMARKING - COMPREHENSIVE RESULTS SUMMARY")
+            print("=" * 90)
+
+            if not RESULTS_FILE.exists():
+                print(f"\n❌ Missing {RESULTS_FILE}")
+                print("Run:")
+                print(f"  {sys.executable} generate_test_images.py")
+                print(f"  {sys.executable} generate_comprehensive_results.py")
+                return 1
+
+            data = json.loads(RESULTS_FILE.read_text())
+            stats = data.get("statistics", {})
+            experiments: list[dict] = data.get("experiments", [])
+
+            images_tested = stats.get("images_tested", [])
+            total_exp = int(stats.get("total_experiments", len(experiments)))
+
+            wq = stats.get("watermarking_quality", {})
+            dp = stats.get("detection_performance", {})
+            rp = stats.get("recovery_performance", {})
+            av = stats.get("attack_visibility", {})
+
+            print(f"\nExperiments: {total_exp}")
+            if images_tested:
+                print("Images:")
+                for n in images_tested:
+                    print(f"  - {n}")
+
+            print("\n" + "─" * 90)
+            print("1) Invisibility (Original vs Watermarked)")
+            print("─" * 90)
+            print(f"Avg PSNR: {_fmt(wq.get('avg_psnr_watermarked_db'))} dB")
+            print(f"Min/Max:  {_fmt(wq.get('min_psnr_watermarked_db'))} / {_fmt(wq.get('max_psnr_watermarked_db'))} dB")
+
+            print("\n" + "─" * 90)
+            print("2) Tamper Detection (Block-level)")
+            print("─" * 90)
+            print(f"Avg TPR:      {_fmt(dp.get('avg_tpr_percent'))}%")
+            print(f"Avg FPR:      {_fmt(dp.get('avg_fpr_percent'), 6)}%")
+            print(f"Avg Accuracy: {_fmt(dp.get('avg_accuracy_percent'))}%")
+
+            print("\n" + "─" * 90)
+            print("3) Recovery Quality")
+            print("─" * 90)
+            print(f"Avg PSNR (full image): {_fmt(rp.get('avg_psnr_recovered_db'))} dB")
+            if "avg_psnr_recovered_roi_db" in rp:
+                print(f"Avg PSNR (tampered ROI): {_fmt(rp.get('avg_psnr_recovered_roi_db'))} dB")
+
+            print("\n" + "─" * 90)
+            print("4) Attack Visibility")
+            print("─" * 90)
+            print(f"Avg PSNR attacked (full image): {_fmt(av.get('avg_psnr_attacked_db'))} dB")
+            if "avg_psnr_attacked_roi_db" in av:
+                print(f"Avg PSNR attacked (ROI):       {_fmt(av.get('avg_psnr_attacked_roi_db'))} dB")
+
+            # Per-image breakdown
+            print("\n" + "─" * 90)
+            print("5) Per-Experiment Breakdown")
+            print("─" * 90)
+
+            for exp in experiments:
+                name = exp.get("image_name", "Unknown")
+                attack = exp.get("attack_type", "Unknown")
+                tpr = exp.get("TPR_percent", None)
+                fpr = exp.get("FPR_percent", None)
+                psnr_w = exp.get("psnr_watermarked", None)
+                psnr_a_roi = exp.get("psnr_attacked_roi", None)
+                psnr_r_roi = exp.get("psnr_recovered_roi", None)
+
+                roi_gain = "N/A"
+                try:
+                    if psnr_a_roi is not None and psnr_r_roi is not None:
+                        roi_gain = f"{float(psnr_r_roi) - float(psnr_a_roi):.2f}"
+                except Exception:
+                    pass
+
+                print(
+                    f"- {name:10} | attack={attack:10} | "
+                    f"TPR={_fmt(tpr)}% FPR={_fmt(fpr, 6)}% | "
+                    f"PSNR(w)={_fmt(psnr_w)} dB | ROI gain={roi_gain} dB"
+                )
+
+            # Pick 3 showcase experiments (largest ROI improvement)
+            def _roi_improvement(e: dict) -> float:
+                try:
+                    return float(e.get("psnr_recovered_roi", 0.0)) - float(e.get("psnr_attacked_roi", 0.0))
+                except Exception:
+                    return float("-inf")
+
+            showcase = sorted(experiments, key=_roi_improvement, reverse=True)[:3]
+            if showcase:
+                print("\n" + "─" * 90)
+                print("6) 2–3 Professor-Ready Examples (open these)")
+                print("─" * 90)
+                print(f"Folder: {RESULTS_DIR}")
+
+                for e in showcase:
+                    files = e.get("files", {})
+                    name = e.get("image_name", "Unknown")
+                    attack = e.get("attack_type", "Unknown")
+                    roi_gain = _roi_improvement(e)
+                    print(f"\n{name} ({attack}) | ROI PSNR gain: {_fmt(roi_gain)} dB")
+                    for k in ["original", "watermarked", "attacked", "tamper_map", "recovered", "diff_attack", "diff_recovery"]:
+                        if k in files:
+                            print(f"  - {k:12}: {RESULTS_DIR / files[k]}")
+
+            print("\n" + "=" * 90)
+            print("Done.")
+            print("=" * 90 + "\n")
+            return 0
+
+
+        if __name__ == "__main__":
+            raise SystemExit(main())
      Metrics:
-       • PSNR: {wq.get('avg_psnr_watermarked_db', 0):.2f} dB (imperceptible)
-       • ITU-R Standard: >30 dB ✅
-       • Visual Quality: Cannot distinguish from original
-  
-  3. SHOW TAMPERING DETECTION (2 minutes)
-     Show: Original → Attacked → Tamper Map (Red = Tampered)
-     Metrics:
-       • Detection Rate: {tpr:.2f}% (catches {tpr:.1f}% of tampering)
-       • False Alarms: {fpr:.4f}% (virtually zero false positives)
-       • Accuracy: {acc:.2f}%
-  
-  4. DEMONSTRATE RECOVERY (2 minutes)
-     Show: Attacked Image → Recovered Image
-     Metrics:
-       • Recovery Quality: {rec_psnr:.2f} dB PSNR
-       • Restored Successfully: Yes
-  
-  5. CITE KEY ACHIEVEMENTS (1 minute)
-     • Extends paper to color images (original: grayscale)
-     • 5 novel modifications beyond paper
-     • Test coverage: Multiple diverse images
-     • Professional metrics: {total_exp} experiments
-  
-  6. OVERALL ASSESSMENT
-     Assessment: {rating}
-     Total Score: 110/100 (45/40 core + 65/60 modifications)
-    """)
-    
-    # ============================================================================
-    # SECTION 7: KEY PERFORMANCE INDICATORS
-    # ============================================================================
-    print("\n" + "─"*90)
-    print("🎯 SECTION 7: KEY PERFORMANCE INDICATORS (KPIs)")
-    print("─"*90)
-    
-    print(f"""
-  ✅ WATERMARK INVISIBILITY
-     PSNR: {wq.get('avg_psnr_watermarked_db', 0):.2f} dB >> 30 dB (ITU-R standard)
-     Conclusion: Watermark is IMPERCEPTIBLE to human eye
-  
-  ✅ TAMPERING DETECTION
-     TPR: {tpr:.2f}% (Catches {tpr:.1f}% of tampering)
-     FPR: {fpr:.4f}% (False alarms: {fpr:.4f}%)
-     Conclusion: EXCELLENT detection with NO false alarms
-  
-  ✅ WATERMARK RECOVERY
-     PSNR: {rec_psnr:.2f} dB
-     Quality: {'Excellent' if rec_psnr >= 24 else 'Good'} recovery
-     Conclusion: Tampered regions restored to {'HIGH' if rec_psnr >= 24 else 'ACCEPTABLE'} quality
-  
-  ✅ ROBUSTNESS
-     Tested on: {', '.join(images)}
-     Success rate: 100% (works across all image types)
-     Conclusion: System is ROBUST across diverse images
-  
-  ✅ IMPLEMENTATION
-     Core: 45/40 points (exceeds by 5)
-     Modifications: 65/60 points (exceeds by 5)
-     Total: 110/100 points (BONUS +10)
-    """)
-    
-    # ============================================================================
-    # SUMMARY
-    # ============================================================================
-    print("\n" + "="*90)
-    print("✅ COMPREHENSIVE RESULTS - READY FOR PROFESSOR PRESENTATION")
-    print("="*90)
-    print(f"""
-  📊 SUMMARY STATISTICS:
-     • Experiments Run: {total_exp}
-     • Result Images: {png_count}
-     • Watermark Quality: {wq.get('avg_psnr_watermarked_db', 0):.2f} dB (Imperceptible)
-     • Detection Accuracy: {tpr:.2f}% TPR, {fpr:.4f}% FPR
-     • Recovery Quality: {rec_psnr:.2f} dB
-     • Overall Grade: A+ (110/100)
-  
-  🎯 WHAT TO TELL PROFESSOR:
-     "We have implemented a fragile watermarking system with tampering detection
-      and recovery capability. The system:
-      
-      1. Embeds imperceptible watermarks (35+ dB PSNR >> ITU-R standard)
-      2. Detects tampering with 97%+ accuracy and <0.01% false alarms
-      3. Recovers tampered regions to acceptable quality
-      4. Works across diverse image types (6 test images)
-      5. Includes 5 novel enhancements beyond the original paper
-      
-      Total implementation: 110/100 points (45/40 core + 65/60 modifications)"
-  
-  📁 FILES TO SHOW:
-     • images/test/ - 6 diverse test images
-     • images/results/ - 30 result images (5 per experiment)
-     • results/experiment_results_comprehensive.json - Full metrics data
-     • docs/presentation.pptx - 13-slide presentation
-    """)
-    
-    print("="*90)
-    print("")
-    
-except Exception as e:
-    print(f"\n❌ Error reading results: {e}")
-    import traceback
-    traceback.print_exc()
-    sys.exit(1)
