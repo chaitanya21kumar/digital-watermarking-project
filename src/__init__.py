@@ -1,0 +1,1 @@
+"""Fragile watermarking implementation package."""

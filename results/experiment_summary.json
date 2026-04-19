@@ -1,0 +1,46 @@
+[
+  {
+    "experiment": "Cutting_Attack_64x64",
+    "image": "Lena",
+    "psnr_watermarked": 35.38360495588976,
+    "psnr_recovered": 23.696673230303098,
+    "tamper_ratio": 0.03192138671875,
+    "TP": 523,
+    "TN": 0,
+    "FP": 0,
+    "FN": 15861,
+    "TPR": 0.03192138671875,
+    "FPR": 0.0,
+    "FNR": 0.96807861328125
+  },
+  {
+    "experiment": "Cutting_Attack_64x64",
+    "image": "Baboon",
+    "psnr_watermarked": 35.33815750125564,
+    "psnr_recovered": 27.1902053959365,
+    "tamper_ratio": 0.031982421875,
+    "TP": 524,
+    "TN": 0,
+    "FP": 0,
+    "FN": 15860,
+    "TPR": 0.031982421875,
+    "FPR": 0.0,
+    "FNR": 0.968017578125
+  },
+  {
+    "experiment": "Cutting_Attack_32x32",
+    "image": "Lena",
+    "psnr_recovered": 28.034319993205514,
+    "tamper_ratio": 0.00799560546875,
+    "TPR": 0.00799560546875,
+    "FPR": 0.0
+  },
+  {
+    "experiment": "Cutting_Attack_32x32",
+    "image": "Baboon",
+    "psnr_recovered": 31.298856469154323,
+    "tamper_ratio": 0.00799560546875,
+    "TPR": 0.00799560546875,
+    "FPR": 0.0
+  }
+]
